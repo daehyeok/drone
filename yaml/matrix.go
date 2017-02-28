@@ -1,7 +1,9 @@
 package yaml
 
 import (
+	"math/rand"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -29,6 +31,10 @@ func (a Axis) String() string {
 
 // ParseMatrix parses the Yaml matrix definition.
 func ParseMatrix(data []byte) ([]Axis, error) {
+
+	if axis, err := parseMatrixShuffle(data); err == nil && len(axis) != 0 {
+		return axis, nil
+	}
 
 	axis, err := parseMatrixList(data)
 	if err == nil && len(axis) != 0 {
@@ -114,4 +120,52 @@ func parseMatrixList(raw []byte) ([]Axis, error) {
 
 	err := yaml.Unmarshal(raw, &data)
 	return data.Matrix.Include, err
+}
+
+func parseMatrixShuffle(raw []byte) ([]Axis, error) {
+	type ShuffleAxis map[string][]string
+
+	data := struct {
+		Matrix struct {
+			Shuffle map[string][]string
+		}
+	}{}
+
+	if err := yaml.Unmarshal(raw, &data); err != nil {
+		return nil, err
+	}
+
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	var axisSlice []Axis
+
+	longestEnvs := 0
+	for _, v := range data.Matrix.Shuffle {
+		if len(v) > longestEnvs {
+			longestEnvs = len(v)
+		}
+	}
+
+	for _i := 0; _i < longestEnvs; _i++ {
+		axis := make(Axis, 0)
+		for k, v := range data.Matrix.Shuffle {
+			if v == nil || len(v) == 0 {
+				selectIdx := rand.Intn(len(axisSlice))
+				axis[k] = axisSlice[selectIdx][k]
+				continue
+			}
+
+			selectIdx := rand.Intn(len(v))
+			axis[k] = v[selectIdx]
+
+			if len(v) > 1 {
+				data.Matrix.Shuffle[k] = append(v[:selectIdx], v[selectIdx+1:]...)
+			} else {
+				data.Matrix.Shuffle[k] = nil
+			}
+		}
+		axisSlice = append(axisSlice, axis)
+	}
+
+	return axisSlice, nil
 }

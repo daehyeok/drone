@@ -43,6 +43,15 @@ func TestMatrix(t *testing.T) {
 	})
 }
 
+func TestShuffle(t *testing.T) {
+	g := goblin.Goblin(t)
+	g.Describe("Shuffle matrix Test", func() {
+		axis, err := parseMatrixShuffle([]byte(fakeMatrixShuffle))
+		g.Assert(err).Equal(nil)
+		g.Assert(len(axis)).Equal(3)
+	})
+}
+
 var fakeMatrix = `
 matrix:
   go_version:
@@ -67,4 +76,19 @@ matrix:
       python_version: 3.4
     - go_version: 1.6
       python_version: 3.4
+`
+
+var fakeMatrixShuffle = `
+matrix:
+  shuffle:
+    network:
+      - gsm
+      - full
+    memory:
+      - 126
+      - 256
+    cpu:
+      - 1
+      - 2
+      - 3
 `
